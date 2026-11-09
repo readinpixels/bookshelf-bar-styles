@@ -1,5 +1,5 @@
 --[[
-2-bookshelf-bar-styles.lua  (KOReader userpatch)     version 1.0.0-beta.1
+2-bookshelf-bar-styles.lua  (KOReader userpatch)     version 1.0.0-beta.2
 
 Adds sixteen progress bar styles to Bookshelf.
 
@@ -1022,17 +1022,17 @@ local STYLES = {
       fill = { "fill" }, bg = { "track" } },
     { name = "Ribbon", paint = ribbon,
       color = { fill = { 196, 64, 70 }, fold = { 222, 110, 112 }, track = LG }, grey = { fill = D, fold = G, track = LG },
-      fill = { "fill" }, bg = { "track" } },
+      derive = { fold = { "tint", 0.3 } }, fill = { "fill" }, bg = { "track" } },
     { name = "Leaves", paint = leaves,
       color = with(FLOWER_C, { stem = { 92, 156, 88 }, leaf = { 132, 190, 112 }, leaf_line = { 58, 116, 62 }, track = LG,
                                petal_vein = { 236, 140, 178 }, seed = { 214, 150, 40 } }),
       grey = with(FLOWER_G, { stem = D, leaf = G, leaf_line = K, track = LG, petal_vein = LG, seed = K }),
-      fill = { "leaf", "stem" }, bg = { "track" } },
+      derive = { leaf_line = { "shade", 0.55 }, stem = { "shade", 0.8 } }, fill = { "leaf", "stem" }, bg = { "track" } },
     { name = "Ivy", paint = ivy,
       color = { stem = { 74, 58, 46 }, leaf = { 46, 92, 58 }, leaf_line = { 20, 40, 26 }, vein = { 88, 138, 96 },
                 berry = { 42, 40, 62 }, shine = { 170, 170, 196 }, track = { 190, 190, 190 } },
       grey = { stem = K, leaf = D, leaf_line = K, vein = G, berry = K, shine = LG, track = LG },
-      fill = { "leaf" }, bg = { "track" } },
+      derive = { leaf_line = { "shade", 0.45 }, vein = { "tint", 0.35 } }, fill = { "leaf" }, bg = { "track" } },
     { name = "Tendril", paint = tendril,
       color = { stem = { 92, 140, 86 }, track = { 196, 210, 192 } },
       grey = { stem = D, track = LG },
@@ -1046,7 +1046,7 @@ local STYLES = {
       color = { petal = { 250, 196, 214 }, line = { 206, 108, 146 }, center = { 236, 130, 166 }, stamen = { 196, 70, 110 },
                 track = { 240, 210, 222 } },
       grey = { petal = LG, line = D, center = G, stamen = K, track = LG },
-      fill = { "petal" }, bg = { "track" } },
+      derive = { line = { "shade", 0.65 }, center = { "shade", 0.82 }, stamen = { "shade", 0.5 } }, fill = { "petal" }, bg = { "track" } },
     { name = "Mushrooms", paint = mushrooms,
       color = { cap = { 214, 70, 60 }, cap2 = { 186, 136, 90 }, dots = WH, stem = { 248, 240, 226 }, line = { 60, 45, 40 },
                 ground = { 104, 146, 78 }, track = LG },
@@ -1060,11 +1060,11 @@ local STYLES = {
     { name = "Constellation", paint = constellation,
       color = { star = { 46, 58, 128 }, line = { 120, 132, 190 }, dot = { 190, 190, 205 } },
       grey = { star = K, line = G, dot = LG },
-      fill = { "star" }, bg = { "dot" } },
+      derive = { line = { "tint", 0.45 } }, fill = { "star" }, bg = { "dot" } },
     { name = "Moon phases", paint = moonPhases,
       color = { dark = { 70, 78, 110 }, lit = { 252, 238, 180 }, line = { 40, 44, 70 }, crater = { 230, 214, 150 }, dot = LG },
       grey = { dark = D, lit = WH, line = K, crater = LG, dot = LG },
-      fill = { "dark" }, bg = { "dot" } },
+      derive = { line = { "shade", 0.55 } }, fill = { "dark" }, bg = { "dot" } },
     { name = "Snowflakes", paint = snowflakes,
       color = { flake = { 70, 130, 190 }, dot = { 190, 205, 220 } },
       grey = { flake = K, dot = LG },
@@ -1090,12 +1090,31 @@ local function rgbOf(c)
     if ok and v then return { v.r, v.g, v.b } end
 end
 
+-- Bookshelf's own default bar colours (and their night-mode inverses). A reader
+-- who tapped "Default" in the colour picker has one of these stored as a
+-- "picked" colour; treat it as not picked, so the styles keep their own colours.
+local function isBookshelfDefault(c)
+    return c and c[1] == c[2] and c[2] == c[3] and (c[1] == 0x40 or c[1] == 0xBF)
+end
+
+local function adjust(c, how, t)
+    if how == "shade" then return { c[1] * t, c[2] * t, c[3] * t } end
+    return { c[1] + (255 - c[1]) * t, c[2] + (255 - c[2]) * t, c[3] + (255 - c[3]) * t }
+end
+
 local function palette(def, colors, color_screen)
     local pal = {}
     for k, v in pairs(color_screen and def.color or def.grey) do pal[k] = v end
     if colors then
         local fill, bg = rgbOf(colors.fill), rgbOf(colors.bg)
-        if fill then for _, k in ipairs(def.fill) do pal[k] = fill end end
+        if isBookshelfDefault(fill) then fill = nil end
+        if isBookshelfDefault(bg) then bg = nil end
+        if fill then
+            for _, k in ipairs(def.fill) do pal[k] = fill end
+            -- outlines and details follow the picked colour, so nothing keeps
+            -- the style's own hue next to it
+            for k, d in pairs(def.derive or {}) do pal[k] = adjust(fill, d[1], d[2]) end
+        end
         if bg then
             for _, k in ipairs(def.bg) do pal[k] = bg end
         elseif colors.bg == false then
