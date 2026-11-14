@@ -1,6 +1,6 @@
 # Bookshelf bar styles
 
-A KOReader userpatch that adds sixteen hand-drawn progress bar styles to the
+A KOReader userpatch that adds sixteen custom progress bar styles to the
 [Bookshelf](https://github.com/AndyHazz/bookshelf.koplugin) plugin: from quiet
 minimal bars to a vine that blooms, a bee heading for a daisy, or a kitten
 chasing a ball of yarn.
